@@ -1,0 +1,26 @@
+{
+  "name": "file_contract_test",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "pretest": "node compile.js && node unlock.js",
+    "test": "ava -v *.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://git.dev.tencent.com/jhhenry/file_contract.git"
+  },
+  "author": "Henry Jin",
+  "license": "ISC",
+  "dependencies": {
+      "web3": "^1.0.0-beta.54",
+      "lodash": "^4.17.11",
+      "bluebird":"^3.5.4",
+      "web3_commons":"0.1.0"
+  },
+  "devDependencies": {
+      "ava": "^1.4.0",
+      "solc_compile": "0.1.0"
+  }
+}
