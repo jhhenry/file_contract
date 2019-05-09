@@ -14,13 +14,13 @@
   "author": "Henry Jin",
   "license": "ISC",
   "dependencies": {
-      "web3": "^1.0.0-beta.54",
-      "lodash": "^4.17.11",
-      "bluebird":"^3.5.4",
-      "web3_commons":"0.1.0"
+    "web3": "^1.0.0-beta.54",
+    "lodash": "^4.17.11",
+    "bluebird": "^3.5.4",
+    "web3_commons": "0.1.0"
   },
   "devDependencies": {
-      "ava": "^1.4.0",
-      "solc_compile": "0.1.0"
+    "ava": "^1.4.0",
+    "solc_compile": "0.1.0"
   }
 }
