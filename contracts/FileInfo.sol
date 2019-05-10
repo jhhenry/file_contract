@@ -12,6 +12,7 @@ contract FileInfo {
     event AddFileInfo(address sender, bytes32 fileHash, string fInfo, string initComment, uint fee);
 
     mapping(bytes32 => mapping(address => Info)) private filesInfo;
+    mapping(bytes32 => Info[]) private infoArray;
 
     constructor() public {
         creator = msg.sender;
@@ -25,6 +26,8 @@ contract FileInfo {
         info.info = fInfo;
         info.initComment = initComment;
         info.fee += msg.value;
+        Info[] storage infos = infoArray[fileHash];
+        infos.push(info);
         emit AddFileInfo(msg.sender, fileHash, fInfo, initComment, info.fee);
     }
 
@@ -41,5 +44,9 @@ contract FileInfo {
         fInfo = info.info;
         initComment = info.initComment;
         fee = info.fee;
+    }
+
+    function getFileInfoSize(bytes32 fileHash) public view returns (uint size) {
+        size = infoArray[fileHash].length;
     }
 }

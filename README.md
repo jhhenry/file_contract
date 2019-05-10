@@ -26,3 +26,6 @@ ava -v test/*.test.js
     - 返回： string fInfo, string initComment, uint fee
     - 参数fileHash: 文件标识
     
+- getFileInfoSize(bytes32 fileHash)：返回指定文件的信息条数
+    - 返回： uint
+    - 参数fileHash: 文件标识

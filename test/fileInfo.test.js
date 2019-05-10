@@ -74,21 +74,12 @@ test.serial("test addFileInfo(bytes32 fileHash, string memory fInfo, string memo
     const sender = t.context.accounts[1];
     fee = web3.utils.toWei("1", 'finney');
     
-    const promEvent = instance.methods.addFileInfo(fileHash, fInfo, initComment).send({from: sender, value: fee, gas: 3000000,
-        gasPrice: '1000000000'});
-    promEvent
-    .once('transactionHash', (transactionHash) => { console.info(`transactionHash: ${transactionHash}`); });
-    const contractevents = await bb.any([bb.delay(30*1000).then(()=> bb.reject('get addFileInfo receipt')), new bb((resolve, reject) => {
-        promEvent.on('error', (error) => { console.error(`addFileInfo txn error: ${error}`); reject(error); })
-        .once('receipt', (receipt) => {
-            //console.log(receipt.contractAddress) // contains the new contract address
-            resolve(receipt.logs);
-        })
-        .once('confirmation', (confirmationNumber, receipt) => { 
-            console.log(`confirmation: ${confirmationNumber}, receipt.logs: ${receipt.logs}`);
-            resolve(receipt.logs);
-        });
-    })]);
+    // const promEvent = instance.methods.addFileInfo(fileHash, fInfo, initComment).send({from: sender, value: fee, gas: 3000000,
+    //     gasPrice: '1000000000'});
+    // promEvent
+    // .once('transactionHash', (transactionHash) => { console.info(`transactionHash: ${transactionHash}`); });
+    const receipt = await addFileInfo(instance, fileHash, fInfo, initComment, fee, sender);
+    const contractevents = receipt.logs;
     t.is(contractevents.length, 1);
     //event AddFileInfo(address sender, bytes32 fileHash, string fInfo, string initComment, uint fee);
     const addFileInfoEvent = web3.eth.abi.decodeLog([{
@@ -115,7 +106,7 @@ test.serial("getFileInfo(bytes32 fileHash) && getFileInfo(bytes32 fileHash, addr
     const instance = t.context.contract.instance;
     const sender = t.context.accounts[1]
     let result = await instance.methods.getFileInfo(fileHash).call({from: sender});
-    //console.log(result);
+    
     t.truthy(result);
     t.is(result.fee.toString(), fee);
     t.deepEqual(_.pick(result, ['fInfo', 'initComment']), {fInfo, initComment});
@@ -123,5 +114,36 @@ test.serial("getFileInfo(bytes32 fileHash) && getFileInfo(bytes32 fileHash, addr
     let result2 = await instance.methods.getFileInfo(fileHash, sender).call({from: sender});
     t.deepEqual(result2, result);
 
-
 });
+
+test.serial("getFileInfoSize", async t => {
+    const instance = t.context.contract.instance,  web3 = t.context.web3;
+    const sender = t.context.accounts[1]
+    let result = await instance.methods.getFileInfoSize(fileHash).call({from: sender});
+    // console.log(result);
+    t.is(result.toString(), "1");
+    fee = web3.utils.toWei("2", 'finney');
+    const receipt = await addFileInfo(instance, fileHash, fInfo, initComment, fee, sender);
+    const contractevents = receipt.logs;
+    t.is(contractevents.length, 1);
+    result = await instance.methods.getFileInfoSize(fileHash).call({from: sender});
+    t.is(result.toString(), "2");
+});
+
+async function addFileInfo(instance, fileHash, fInfo, initComment, fee, sender) {
+    const promEvent = instance.methods.addFileInfo(fileHash, fInfo, initComment).send({from: sender, value: fee, gas: 3000000,
+        gasPrice: '1000000000'});
+    promEvent
+    .once('transactionHash', (transactionHash) => { console.info(`transactionHash: ${transactionHash}`); });
+    return bb.any([bb.delay(30*1000).then(()=> bb.reject('get addFileInfo receipt')), new bb((resolve, reject) => {
+        promEvent.on('error', (error) => { console.error(`addFileInfo txn error: ${error}`); reject(error); })
+        .once('receipt', (receipt) => {
+            //console.log(receipt.contractAddress) // contains the new contract address
+            resolve(receipt);
+        })
+        .once('confirmation', (confirmationNumber, receipt) => { 
+            console.log(`confirmation: ${confirmationNumber}, receipt.logs: ${receipt.logs}`);
+            resolve(receipt);
+        });
+    })]);
+}
