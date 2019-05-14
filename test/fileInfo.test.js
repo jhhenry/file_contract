@@ -13,13 +13,8 @@ test.before("read compiled contracts & deploy to a geth node", async t => {
 
     const content = data.toString();
     t.truthy(content);
-    //console.log(`content: ${content}`);
     const compiled = JSON.parse(content);
-    // console.log("compiled:", compiled);
-    // _.keys(compiled, key => {
-    //     console.log(`${key}: ${compiled[key]}`);
-    // })
-    //console.log("compiled:" , compiled.contracts["FileInfo.sol"].FileInfo.abi);
+   
     const web3 = await web3_commons.initHTTPWeb3('http://192.168.56.123:8565', {
         headers: {
             Origin: "http://localhost"
@@ -116,9 +111,10 @@ test.serial("getFileInfo(bytes32 fileHash) && getFileInfo(bytes32 fileHash, addr
 
 });
 
-test.serial("getFileInfoSize", async t => {
+test.serial("getFileInfoSize && getFileInfoByIndex", async t => {
     const instance = t.context.contract.instance,  web3 = t.context.web3;
-    const sender = t.context.accounts[1]
+    const sender = t.context.accounts[1];
+    const another_sender = t.context.accounts[0];
     let result = await instance.methods.getFileInfoSize(fileHash).call({from: sender});
     // console.log(result);
     t.is(result.toString(), "1");
@@ -127,7 +123,20 @@ test.serial("getFileInfoSize", async t => {
     const contractevents = receipt.logs;
     t.is(contractevents.length, 1);
     result = await instance.methods.getFileInfoSize(fileHash).call({from: sender});
-    t.is(result.toString(), "2");
+    t.is(result.toString(), "1");
+
+    //another sender add fileInfo
+    await addFileInfo(instance, fileHash, fInfo, initComment, fee, another_sender);
+
+    result = await instance.methods.getFileInfoByIndex(fileHash, 0).call({from: sender});
+    t.truthy(result);
+    t.is(result.fee.toString(), web3.utils.toWei("3", 'finney'));
+    t.deepEqual(_.pick(result, ['fInfo', 'initComment', 'sender']), {fInfo, initComment, sender});
+
+    //test another sender add fileInfo
+    result = await instance.methods.getFileInfoByIndex(fileHash, 1).call({from: sender});
+    t.is(result.fee.toString(), web3.utils.toWei("2", 'finney'));
+    t.deepEqual(_.pick(result, ['fInfo', 'initComment', 'sender']), {fInfo, initComment, sender: another_sender});
 });
 
 async function addFileInfo(instance, fileHash, fInfo, initComment, fee, sender) {

@@ -29,3 +29,6 @@ ava -v test/*.test.js
 - getFileInfoSize(bytes32 fileHash)：返回指定文件的信息条数
     - 返回： uint
     - 参数fileHash: 文件标识
+
+- getFileInfoByIndex(bytes32 fileHash, uint index): 返回指定文件的第index - 1个文件信息
+  - 返回： string fInfo, string initComment, uint fee, address sender
