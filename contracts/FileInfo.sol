@@ -8,7 +8,7 @@ contract FileInfo {
         address sender;
     }
 
-    address public creator;
+    address payable public creator;
 
     event AddFileInfo(address sender, bytes32 fileHash, string fInfo, string initComment, uint fee);
 
@@ -65,5 +65,11 @@ contract FileInfo {
         Info[] storage arr = infoArray[fileHash];
         Info storage info = arr[index];
         (fInfo, initComment, fee, sender) = (info.info, info.initComment, info.fee, info.sender);
+    }
+
+    function transferToCreator() public
+    {
+        require(msg.sender == creator, "only contract creator can call this method");
+        creator.transfer(address(this).balance);
     }
 }

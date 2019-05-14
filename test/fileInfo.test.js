@@ -26,7 +26,7 @@ test.before("read compiled contracts & deploy to a geth node", async t => {
     const newContract = web3.eth.Contract(compiled.contracts["FileInfo.sol"].FileInfo.abi);
     t.truthy(newContract);
 
-    const creator = accounts[0];
+    const creator = accounts[2];
     const deployEvent = newContract.deploy({
         data: '0x' + compiled.contracts["FileInfo.sol"].FileInfo.evm.bytecode.object
     }).send({
@@ -55,6 +55,8 @@ test.before("read compiled contracts & deploy to a geth node", async t => {
 
     const creator_result = await newContractInstance.methods.creator.call({from: accounts[1]});
     t.is(creator_result, creator);
+
+    t.is(await web3.eth.getBalance(newContractInstance.address), '0');
     
     t.context.contract = {instance: newContractInstance, creator};
     t.context.accounts = accounts;
@@ -69,13 +71,10 @@ test.serial("test addFileInfo(bytes32 fileHash, string memory fInfo, string memo
     const sender = t.context.accounts[1];
     fee = web3.utils.toWei("1", 'finney');
     
-    // const promEvent = instance.methods.addFileInfo(fileHash, fInfo, initComment).send({from: sender, value: fee, gas: 3000000,
-    //     gasPrice: '1000000000'});
-    // promEvent
-    // .once('transactionHash', (transactionHash) => { console.info(`transactionHash: ${transactionHash}`); });
     const receipt = await addFileInfo(instance, fileHash, fInfo, initComment, fee, sender);
     const contractevents = receipt.logs;
     t.is(contractevents.length, 1);
+    t.is(await web3.eth.getBalance(instance.address), fee);
     //event AddFileInfo(address sender, bytes32 fileHash, string fInfo, string initComment, uint fee);
     const addFileInfoEvent = web3.eth.abi.decodeLog([{
         type: "address",
@@ -127,7 +126,7 @@ test.serial("getFileInfoSize && getFileInfoByIndex", async t => {
 
     //another sender add fileInfo
     await addFileInfo(instance, fileHash, fInfo, initComment, fee, another_sender);
-
+    t.is(await web3.eth.getBalance(instance.address), web3.utils.toWei("5", 'finney'));
     result = await instance.methods.getFileInfoByIndex(fileHash, 0).call({from: sender});
     t.truthy(result);
     t.is(result.fee.toString(), web3.utils.toWei("3", 'finney'));
@@ -139,15 +138,40 @@ test.serial("getFileInfoSize && getFileInfoByIndex", async t => {
     t.deepEqual(_.pick(result, ['fInfo', 'initComment', 'sender']), {fInfo, initComment, sender: another_sender});
 });
 
+test.serial("transferToCreator", async t => {
+    const {instance, creator} = t.context.contract,  web3 = t.context.web3;
+    t.truthy(creator);
+    const initB = await web3.eth.getBalance(creator);
+    const initContractB = await web3.eth.getBalance(instance.address);
+    // console.log(web3.utils.fromWei(initB, 'finney'));
+    // console.log(`contract initContractB: ${initContractB}`)
+    t.truthy(initB);
+    const gasPrice = '1000000000';
+    const txn = instance.methods.transferToCreator().send({from: creator, gas: 300000,
+        gasPrice});
+    const recpt = await waitForTxnReceipt(txn);
+    t.truthy(recpt);
+    t.is(await web3.eth.getBalance(instance.address), '0');
+    const b = web3.utils.toBN(await web3.eth.getBalance(creator));
+    const diff = b.sub(web3.utils.toBN(initB));
+    const gasUsed = web3.utils.toBN(recpt.gasUsed).mul(web3.utils.toBN(gasPrice));
+    t.deepEqual(initContractB, diff.add(gasUsed).toString());
+    // console.log(web3.utils.fromWei(b.sub(web3.utils.toBN(initB)).toString(), 'finney'));
+    // console.log(web3.utils.fromWei(web3.utils.toBN(recpt.gasUsed).mul(web3.utils.toBN(1000000000)).toString(), 'finney'));
+});
+
 async function addFileInfo(instance, fileHash, fInfo, initComment, fee, sender) {
     const promEvent = instance.methods.addFileInfo(fileHash, fInfo, initComment).send({from: sender, value: fee, gas: 3000000,
         gasPrice: '1000000000'});
-    promEvent
+    return waitForTxnReceipt(promEvent);
+}
+
+function waitForTxnReceipt(txn) {
+    txn
     .once('transactionHash', (transactionHash) => { console.info(`transactionHash: ${transactionHash}`); });
     return bb.any([bb.delay(30*1000).then(()=> bb.reject('get addFileInfo receipt')), new bb((resolve, reject) => {
-        promEvent.on('error', (error) => { console.error(`addFileInfo txn error: ${error}`); reject(error); })
+        txn.on('error', (error) => { console.error(`addFileInfo txn error: ${error}`); reject(error); })
         .once('receipt', (receipt) => {
-            //console.log(receipt.contractAddress) // contains the new contract address
             resolve(receipt);
         })
         .once('confirmation', (confirmationNumber, receipt) => { 

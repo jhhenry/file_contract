@@ -21,6 +21,6 @@
   },
   "devDependencies": {
     "ava": "^1.4.0",
-    "solc_compile": "0.1.0"
+    "solc_compile": "0.1.1"
   }
 }
